@@ -1,3 +1,12 @@
+# AI Model Scanner v1.3
+# Author: Dipta
+# Date: September 11, 2025
+# Description: A GUI-based security scanner for AI models using the Garak framework.
+#              This tool allows users to scan AI models for vulnerabilities across
+#              various categories, generate reports in JSON or HTML format, and manage
+#              configurations for probes and dependencies. It includes features like
+#              dark mode, log management, and a user-friendly interface built with Tkinter.
+
 import os
 import sys
 import subprocess
@@ -12,21 +21,24 @@ from pathlib import Path
 from datetime import datetime
 from collections import defaultdict
 
+# ===============================
 # Constants
-DEFAULT_TIMEOUT = 900
-VERSION = "1.3"
-DEFAULT_REPORT_DIR = os.path.join(os.getcwd(), "reports")
-DEFAULT_PROBES_FILE = "probes_list.json"
+# ===============================
+DEFAULT_TIMEOUT = 900  # Default timeout for probe execution in seconds
+VERSION = "1.3"  # Current version of the scanner
+DEFAULT_REPORT_DIR = os.path.join(os.getcwd(), "reports")  # Default directory for reports
+DEFAULT_PROBES_FILE = "probes_list.json"  # Default file for probe definitions
 
-# Force UTF-8 globally
+# Force UTF-8 encoding globally
 os.environ["PYTHONUTF8"] = "1"
 
+# Dependencies required for the scanner
 DEPENDENCIES = [
-    ("garak", "garak"),
-    ("ollama", "ollama"),
+    ("garak", "garak"),  # Garak framework for vulnerability scanning
+    ("ollama", "ollama"),  # Ollama for local model management
 ]
 
-# Initial hardcoded ALL_PROBES (fallback)
+# Initial hardcoded probe definitions (fallback)
 ALL_PROBES = {
     "LLM01: Prompt Injection": [
         "promptinject.HijackLongPrompt",
@@ -272,21 +284,36 @@ ALL_PROBES = {
     ],
 }
 
+# ===============================
+# Scanner Configuration Class
+# ===============================
 class ScannerConfig:
+    """Configuration class to store scanner settings and state."""
     def __init__(self, root):
-        self.stop_scan_flag = False
-        self.dark_mode_enabled = False
-        self.report_dir = tk.StringVar(master=root, value=DEFAULT_REPORT_DIR)
-        self.timeout = tk.StringVar(master=root, value=str(DEFAULT_TIMEOUT))
-        self.probes_file = tk.StringVar(master=root, value=DEFAULT_PROBES_FILE)
+        self.stop_scan_flag = False  # Flag to stop ongoing scans
+        self.dark_mode_enabled = False  # Toggle for dark mode
+        self.report_dir = tk.StringVar(master=root, value=DEFAULT_REPORT_DIR)  # Directory for reports
+        self.timeout = tk.StringVar(master=root, value=str(DEFAULT_TIMEOUT))  # Timeout for probes
+        self.probes_file = tk.StringVar(master=root, value=DEFAULT_PROBES_FILE)  # Probes JSON file
 
-# ---------------- Load Probes ----------------
+# ===============================
+# Probe Management Functions
+# ===============================
 def clean_probe_string(s):
-    """Remove ANSI escape codes, emojis, 'probes: ' prefix, URLs, timestamps, and other invalid characters from a string."""
+    """
+    Clean a probe string by removing invalid characters such as ANSI escape codes,
+    emojis, URLs, timestamps, and version strings.
+    
+    Args:
+        s (str): The string to clean.
+    
+    Returns:
+        str: The cleaned string.
+    """
     # Remove ANSI escape codes
     ansi_pattern = r'\u001b\[[0-9;]*[a-zA-Z]'
     s = re.sub(ansi_pattern, '', s)
-    # Remove emojis (Unicode characters like U+1F4A4)
+    # Remove emojis
     s = re.sub(r'[\U0001F000-\U0001FFFF]', '', s)
     # Remove 'probes: ' prefix
     s = s.replace('probes: ', '')
@@ -296,11 +323,20 @@ def clean_probe_string(s):
     s = re.sub(r'\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d+', '', s)
     # Remove version strings (e.g., v0.13.0)
     s = re.sub(r'v\d+\.\d+\.\d+', '', s)
-    # Remove any remaining non-alphanumeric characters except dots, underscores, and slashes
+    # Allow only alphanumeric, dots, underscores, and slashes
     s = re.sub(r'[^a-zA-Z0-9._/]', '', s)
     return s.strip()
 
 def load_probes_from_json(path):
+    """
+    Load probe definitions from a JSON file and update ALL_PROBES.
+    
+    Args:
+        path (str): Path to the JSON file containing probe definitions.
+    
+    Returns:
+        bool: True if probes were loaded successfully, False otherwise.
+    """
     global ALL_PROBES
     if os.path.exists(path):
         try:
@@ -309,7 +345,7 @@ def load_probes_from_json(path):
             cleaned_data = {}
             skipped_categories = []
             for category, probes in raw_data.items():
-                # Skip invalid category
+                # Skip invalid categories
                 if "garak LLM vulnerability scanner" in category.lower():
                     skipped_categories.append(category)
                     continue
@@ -341,6 +377,7 @@ def load_probes_from_json(path):
     return False
 
 def refresh_categories():
+    """Refresh the category checkboxes in the UI based on ALL_PROBES."""
     for widget in checkbox_frame.winfo_children():
         widget.destroy()
     category_vars.clear()
@@ -353,6 +390,7 @@ def refresh_categories():
     category_canvas.configure(scrollregion=category_canvas.bbox("all"))
 
 def browse_probes_file():
+    """Open a file dialog to select a probes JSON file and load it."""
     file = filedialog.askopenfilename(title="Select Probes JSON", filetypes=[("JSON Files", "*.json")])
     if file:
         config.probes_file.set(file)
@@ -360,17 +398,20 @@ def browse_probes_file():
         refresh_categories()
 
 def load_probes_file():
+    """Load probes from the file specified in the config."""
     path = config.probes_file.get()
     load_probes_from_json(path)
     refresh_categories()
 
 def probes_setup():
+    """Open a popup for managing probe imports."""
     popup = tk.Toplevel(root)
     popup.title("Probes Setup")
     ttk.Button(popup, text="Import All Probes", command=import_all_probes).pack(pady=10, padx=20)
     ttk.Button(popup, text="Close", command=popup.destroy).pack(pady=10, padx=20)
 
 def import_all_probes():
+    """Import all available probes from the Garak framework and save to JSON."""
     try:
         proc = subprocess.run(["garak", "--list_probes"], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, encoding="utf-8", timeout=30)
         if proc.returncode != 0:
@@ -404,23 +445,51 @@ def import_all_probes():
         log_text.insert(tk.END, f"Error importing probes: {e}\n")
         log_text.see(tk.END)
 
-# ---------------- Core Functions ----------------
+# ===============================
+# Core Scanning Functions
+# ===============================
 def validate_input(value, is_model_name=False):
-    """Validate input string, allowing colons for model names."""
+    """
+    Validate input string, allowing colons for model names.
+    
+    Args:
+        value (str): The input string to validate.
+        is_model_name (bool): Whether the input is a model name (allows colons).
+    
+    Returns:
+        str: The validated input string.
+    
+    Raises:
+        ValueError: If the input contains invalid characters.
+    """
     if is_model_name:
-        # Allow alphanumeric, underscores, dots, hyphens, slashes, and colons for model names
         pattern = r"^[a-zA-Z0-9_.\-/:]+$"
     else:
-        # Stricter validation for model_type and probes
         pattern = r"^[a-zA-Z0-9_.\-/]+$"
     if not re.match(pattern, value):
         raise ValueError(f"Invalid input: {value}")
     return value
 
 def run_garak_probe(model_type, model_name, probes, report_format, output_path, timeout_value, log_callback=None, progress_callback=None):
+    """
+    Run Garak probes on the specified model and generate reports.
+    
+    Args:
+        model_type (str): The type of model (e.g., ollama, huggingface).
+        model_name (str): The name of the model to scan.
+        probes (list): List of probes to execute.
+        report_format (str): Format for the report (JSON or HTML).
+        output_path (str): Directory to save reports.
+        timeout_value (int): Timeout for each probe execution.
+        log_callback (callable): Function to log messages to the UI.
+        progress_callback (callable): Function to update progress in the UI.
+    
+    Returns:
+        list: Results of the probe executions.
+    """
     try:
         validate_input(model_type)
-        validate_input(model_name, is_model_name=True)  # Allow colons for model_name
+        validate_input(model_name, is_model_name=True)
         for probe in probes:
             validate_input(probe)
     except ValueError as e:
@@ -485,6 +554,14 @@ def run_garak_probe(model_type, model_name, probes, report_format, output_path, 
     return results
 
 def generate_summary_report(output_dir: Path, report_format: str, log_callback=None):
+    """
+    Generate a summary report from probe results in JSON or HTML format.
+    
+    Args:
+        output_dir (Path): Directory containing probe hitlog files.
+        report_format (str): Format for the report (JSON or HTML).
+        log_callback (callable): Function to log messages to the UI.
+    """
     summary = {
         "generated_at": datetime.now().isoformat(),
         "probes": [],
@@ -553,8 +630,11 @@ def generate_summary_report(output_dir: Path, report_format: str, log_callback=N
         if log_callback:
             log_callback(f"Error writing summary report: {e}\n")
 
-# ---------------- UI Functions ----------------
+# ===============================
+# UI Control Functions
+# ===============================
 def start_scan():
+    """Start the scanning process with the selected configuration."""
     config.stop_scan_flag = False
 
     model_type = model_type_var.get()
@@ -589,9 +669,9 @@ def start_scan():
     progress_bar["maximum"] = len(probes)
 
     def log_callback(msg):
-        # Truncate logs if too long to prevent GUI slowdown (fix for potential DoS)
-        if int(log_text.index('end-1c').split('.')[0]) > 10000:  # Approx 10k lines
-            log_text.delete("1.0", "1000.0")  # Remove first 1000 lines
+        # Truncate logs to prevent GUI slowdown
+        if int(log_text.index('end-1c').split('.')[0]) > 10000:
+            log_text.delete("1.0", "1000.0")
         log_text.insert(tk.END, msg)
         log_text.see(tk.END)
         root.update_idletasks()
@@ -608,17 +688,21 @@ def start_scan():
     threading.Thread(target=worker, daemon=True).start()
 
 def stop_scan():
+    """Stop the ongoing scan."""
     config.stop_scan_flag = True
 
 def select_all_categories():
+    """Select all probe categories."""
     for var in category_vars.values():
         var.set(True)
 
 def deselect_all_categories():
+    """Deselect all probe categories."""
     for var in category_vars.values():
         var.set(False)
 
 def toggle_dark_mode():
+    """Toggle between light and dark mode for the UI."""
     config.dark_mode_enabled = not config.dark_mode_enabled
     if config.dark_mode_enabled:
         style.theme_use("alt")
@@ -630,6 +714,7 @@ def toggle_dark_mode():
         log_text.configure(bg="white", fg="black", insertbackground="black")
 
 def browse_report_dir():
+    """Open a dialog to select the report output directory."""
     folder = filedialog.askdirectory(title="Select Report Folder")
     if folder:
         base_dir = os.getcwd()
@@ -639,6 +724,7 @@ def browse_report_dir():
         config.report_dir.set(folder)
 
 def open_report_folder():
+    """Open the report folder in the system's file explorer."""
     path = config.report_dir.get()
     if not path or not os.path.exists(path):
         messagebox.showerror("Error", "No valid report folder selected")
@@ -647,10 +733,12 @@ def open_report_folder():
     webbrowser.open(f"file://{path}")
 
 def reset_logs():
+    """Clear the log display and reset the progress bar."""
     log_text.delete("1.0", tk.END)
     progress_bar["value"] = 0
 
 def export_logs():
+    """Export the current logs to a text file."""
     file_path = filedialog.asksaveasfilename(defaultextension=".txt", filetypes=[("Text Files", "*.txt")])
     if file_path:
         try:
@@ -661,6 +749,7 @@ def export_logs():
             messagebox.showerror("Error", f"Failed to save logs: {e}")
 
 def verify_dependencies():
+    """Check for missing dependencies and provide installation options."""
     missing = []
     for name, pip_pkg in DEPENDENCIES:
         if shutil.which(name):
@@ -678,10 +767,9 @@ def verify_dependencies():
         return
 
     def install_pkg(pkg):
-        # Added confirmation for security (fix for untrusted installs)
         if messagebox.askyesno("Confirm Install", f"Are you sure you want to install {pkg} via pip? Ensure your environment is secure."):
             try:
-                subprocess.check_call([sys.executable, "-m", "pip", "install", pkg, "--user"])  # Added --user for isolation
+                subprocess.check_call([sys.executable, "-m", "pip", "install", pkg, "--user"])
                 messagebox.showinfo("Success", f"Installed {pkg}")
             except Exception as e:
                 messagebox.showerror("Error", f"Failed to install {pkg}: {e}")
@@ -696,6 +784,12 @@ def verify_dependencies():
     ttk.Button(popup, text="Close", command=popup.destroy).grid(row=len(missing), column=0, columnspan=2, pady=10)
 
 def update_model_list(event=None):
+    """
+    Update the model dropdown based on the selected model type.
+    
+    Args:
+        event: Tkinter event object (optional).
+    """
     model_type = model_type_var.get()
     model_dropdown["values"] = []
     model_name_var.set("")
@@ -730,25 +824,29 @@ def update_model_list(event=None):
     elif model_type == "openai":
         model_dropdown["values"] = ["gpt-3.5-turbo", "gpt-4"]
 
-# ---------------- UI Layout ----------------
+# ===============================
+# UI Setup
+# ===============================
 root = tk.Tk()
 root.title("AI Security Scanner (OWASP + Extra Categories)")
 root.geometry("1200x820")
 
-# Initialize ScannerConfig after root
+# Initialize ScannerConfig
 config = ScannerConfig(root)
 
+# Configure style
 style = ttk.Style()
 style.theme_use("clam")
 
+# Main frame
 main_frame = ttk.Frame(root, padding=10)
 main_frame.pack(fill="both", expand=True)
 
-main_frame.columnconfigure(0, weight=0)  # left fixed
-main_frame.columnconfigure(1, weight=1)  # right expands
+main_frame.columnconfigure(0, weight=0)
+main_frame.columnconfigure(1, weight=1)
 main_frame.rowconfigure(0, weight=1)
 
-# Left: categories with select/deselect
+# Left: Categories
 left_frame = ttk.LabelFrame(main_frame, text="Categories", padding=10)
 left_frame.grid(row=0, column=0, sticky="ns")
 
@@ -765,18 +863,18 @@ category_canvas.create_window((0, 0), window=checkbox_frame, anchor="nw")
 category_canvas.configure(yscrollcommand=scrollbar.set)
 
 category_vars = {}
-refresh_categories()  # Initial population
+refresh_categories()
 
 category_canvas.pack(side="left", fill="y", expand=True)
 scrollbar.pack(side="right", fill="y")
 
-# Right: controls
+# Right: Controls
 right_frame = ttk.Frame(main_frame, padding=10)
 right_frame.grid(row=0, column=1, sticky="nsew")
 right_frame.grid_rowconfigure(7, weight=1)
 right_frame.grid_columnconfigure(1, weight=1)
 
-# Model + Report format
+# Model and Report Format
 ttk.Label(right_frame, text="Model Type:").grid(row=0, column=0, sticky="w", pady=5)
 model_type_var = tk.StringVar(value="ollama")
 model_type_dropdown = ttk.Combobox(right_frame, textvariable=model_type_var, values=["ollama", "huggingface", "openai"])
@@ -797,10 +895,11 @@ ttk.Label(right_frame, text="Report Folder:").grid(row=3, column=0, sticky="w", 
 ttk.Entry(right_frame, textvariable=config.report_dir).grid(row=3, column=1, sticky="ew", padx=(0,5))
 ttk.Button(right_frame, text="Browse", command=browse_report_dir).grid(row=3, column=2, padx=5)
 
-# Main controls (grouped below progress bar)
+# Progress Bar
 progress_bar = ttk.Progressbar(right_frame, mode="determinate")
 progress_bar.grid(row=4, column=0, columnspan=3, sticky="ew", pady=5)
 
+# Main Controls
 main_controls = ttk.Frame(right_frame)
 main_controls.grid(row=5, column=0, columnspan=3, pady=10, sticky="ew")
 for i, (label, cmd) in enumerate([
@@ -813,7 +912,7 @@ for i, (label, cmd) in enumerate([
     ttk.Button(main_controls, text=label, command=cmd).grid(row=0, column=i, padx=5, pady=5, sticky="ew")
     main_controls.grid_columnconfigure(i, weight=1)
 
-# Settings section
+# Settings Section
 settings_frame = ttk.LabelFrame(right_frame, text="Settings / Config", padding=10)
 settings_frame.grid(row=6, column=0, columnspan=3, sticky="ew", pady=5)
 ttk.Button(settings_frame, text="Verify Dependencies", command=verify_dependencies).pack(side="left", padx=5)
@@ -826,21 +925,22 @@ ttk.Entry(settings_frame, textvariable=config.probes_file, width=20).pack(side="
 ttk.Button(settings_frame, text="Browse", command=browse_probes_file).pack(side="left", padx=5)
 ttk.Button(settings_frame, text="Load", command=load_probes_file).pack(side="left", padx=5)
 
-# Log window (created as child of right_frame, using grid)
+# Log Window
 log_text = tk.Text(right_frame, wrap="word", height=20)
 log_text.grid(row=7, column=0, columnspan=2, sticky="nsew", pady=10)
 log_scroll = ttk.Scrollbar(right_frame, orient="vertical", command=log_text.yview)
 log_text.configure(yscrollcommand=log_scroll.set)
 log_scroll.grid(row=7, column=2, sticky="ns", pady=10)
 
-# Load default probes after log_text is created
+# Load default probes
 load_probes_from_json(DEFAULT_PROBES_FILE)
 
 # Footer
 footer = ttk.Label(root, text=f"v{VERSION} - Designed by Dipta", anchor="center")
 footer.pack(side="bottom", fill="x", pady=5)
 
-# Populate model list for default selection
+# Initialize model list
 update_model_list()
 
+# Start the main event loop
 root.mainloop()

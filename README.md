@@ -1,7 +1,7 @@
 # AI LLM Vulnerability Scanner
 
 [![Python Version](https://img.shields.io/badge/python-3.8%2B-blue)](https://www.python.org/)
-[![Version](https://img.shields.io/badge/version-1.2-brightgreen)](https://github.com/yourusername/ai-llm-scanner/releases/tag/v1.2)
+[![Version](https://img.shields.io/badge/version-1.3-brightgreen)](https://github.com/dipta-roy/AI-Model-Scanner/releases/tag/v1.3)
 
 ## Overview
 

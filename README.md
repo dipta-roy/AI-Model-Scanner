@@ -27,6 +27,8 @@ This project is inspired by OWASP guidelines for LLM security and extends Garak'
 - **Security Features**: Input validation to prevent injection attacks, path restrictions to avoid traversal, and timeouts to mitigate DoS risks.
 - **Probes Import**: Import all available Garak probes dynamically and save to JSON for customization.
 
+![AI Model Scanner 1.3 Interface](Images/AI_Model_Scanner_Interface.png)
+
 ## Installation
 
 ### Prerequisites

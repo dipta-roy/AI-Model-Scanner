@@ -282,7 +282,7 @@ class ScannerConfig:
 
 # ---------------- Load Probes ----------------
 def clean_probe_string(s):
-    """Remove ANSI escape codes, emojis, and 'probes: ' prefix from a string."""
+    """Remove ANSI escape codes, emojis, 'probes: ' prefix, URLs, timestamps, and other invalid characters from a string."""
     # Remove ANSI escape codes
     ansi_pattern = r'\u001b\[[0-9;]*[a-zA-Z]'
     s = re.sub(ansi_pattern, '', s)
@@ -290,6 +290,14 @@ def clean_probe_string(s):
     s = re.sub(r'[\U0001F000-\U0001FFFF]', '', s)
     # Remove 'probes: ' prefix
     s = s.replace('probes: ', '')
+    # Remove URLs
+    s = re.sub(r'https?://[^\s]+', '', s)
+    # Remove timestamps (e.g., 2025-09-11T12:29:21.239318)
+    s = re.sub(r'\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d+', '', s)
+    # Remove version strings (e.g., v0.13.0)
+    s = re.sub(r'v\d+\.\d+\.\d+', '', s)
+    # Remove any remaining non-alphanumeric characters except dots, underscores, and slashes
+    s = re.sub(r'[^a-zA-Z0-9._/]', '', s)
     return s.strip()
 
 def load_probes_from_json(path):

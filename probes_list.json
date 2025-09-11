@@ -84,9 +84,6 @@
     "Fileformats": [
         "fileformats.HF_Files"
     ],
-    "Garak llm vulnerability scanner v0": [
-        "garak LLM vulnerability scanner v0.13.0 ( https://github.com/NVIDIA/garak ) at 2025-09-11T09:41:03.626353"
-    ],
     "Glitch": [
         "glitch.Glitch",
         "glitch.GlitchFull"

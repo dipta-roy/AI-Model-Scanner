@@ -36,7 +36,7 @@ This project is inspired by OWASP guidelines for LLM security and extends Garak'
 ### Steps
 1. Clone the repository:
    ```
-   git clone https://github.com/yourusername/AI-Model-Scanner.git
+   git clone https://github.com/dipta-roy/AI-Model-Scanner.git
    cd ai-llm-scanner
    ```
 

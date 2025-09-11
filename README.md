@@ -26,7 +26,13 @@ This project is inspired by OWASP guidelines for LLM security and extends Garak'
 - **Log and Export Tools**: View, reset, and export scan logs; open report folders directly.
 - **Security Features**: Input validation to prevent injection attacks, path restrictions to avoid traversal, and timeouts to mitigate DoS risks.
 - **Probes Import**: Import all available Garak probes dynamically and save to JSON for customization.
-
+- **Consolidated Report Generation**: A dedicated utility to aggregate results from multiple `.hitlog.jsonl` files into a single HTML report. Features include:
+  - GUI interface to select the report folder.
+  - Automatic detection of model name (e.g., `gpt2` from `ollama mapler/gpt2:latest`) with sanitization of special characters (replaced with `_`).
+  - Inclusion of scan date, model name, and model type (e.g., "Ollama-based LLM") in the report.
+  - Vulnerability breakdown by DEFCON levels (Critical, High, Medium, Low, Informational) with filterable probe results.
+  - Saved as `<sanitized_model_name>_AI-Model-Scanner-Report_<YYYYMMDD>.html` (e.g., `gpt2_AI-Model-Scanner-Report_20250911.html`).
+  
 ![AI Model Scanner 1.3 Interface](Images/AI_Model_Scanner_Interface.png)
 
 ## Installation

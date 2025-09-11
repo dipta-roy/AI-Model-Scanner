@@ -1,11 +1,11 @@
-# AI LLM Vulnerability Scanner
+# AI Model Scanner
 
 [![Python Version](https://img.shields.io/badge/python-3.8%2B-blue)](https://www.python.org/)
 [![Version](https://img.shields.io/badge/version-1.3-brightgreen)](https://github.com/dipta-roy/AI-Model-Scanner/releases/tag/v1.3)
 
 ## Overview
 
-AI LLM Vulnerability Scanner is a graphical user interface (GUI) tool designed to scan Large Language Models (LLMs) for security vulnerabilities using the [Garak](https://github.com/leondz/garak) framework. It allows users to probe AI models (such as those from Ollama, Hugging Face, or OpenAI) for common LLM risks based on the OWASP Top 10 for LLMs and additional custom categories.
+AI Model Scanner is a graphical user interface (GUI) tool designed to scan Large Language Models (LLMs) for security vulnerabilities using the [Garak](https://github.com/leondz/garak) framework. It allows users to probe AI models (such as those from Ollama, Hugging Face, or OpenAI) for common LLM risks based on the OWASP Top 10 for LLMs and additional custom categories.
 
 The tool provides an intuitive Tkinter-based interface to select probe categories, configure models, run scans, and generate reports in JSON or HTML format. It supports timeout controls, log management, and dependency verification to ensure a smooth user experience.
 
